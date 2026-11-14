@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jashory.github.io/mcp-agent-security-auditor/sitemap.xml

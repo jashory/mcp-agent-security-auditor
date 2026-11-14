@@ -1,0 +1,11 @@
+# MCP & Agent Security Auditor
+
+> Lightweight fast CWE-mapped static pre-audit security scanner & Agent Skill for MCP servers, autonomous AI agent hooks (${ENV_VAR} cleartext secret persistence), and Firebase/Firestore security rules.
+
+- **Repository:** https://github.com/jashory/mcp-agent-security-auditor
+- **Interactive Playground:** https://jashory.github.io/mcp-agent-security-auditor/
+- **Principal Author:** Scientist HM Shihabuddin Jashory (ORCID: https://orcid.org/0009-0003-4163-0092 | Wikidata: https://www.wikidata.org/wiki/Q141910532)
+- **Research & QA Partner:** MD Rafiul Islam Shubho (Researcher, AI Evaluator & RLHF Specialist; Co-Founder & Managing Director, Vision Flow Group)
+- **Organization:** Vision Flow Group (https://visionflowgroup.com | Wikidata: Q141910527)
+- **Research Citation (SEC-VRP):** DOI 10.5281/zenodo.23832725 | OSF MetaArXiv https://osf.io/preprints/metaarxiv/6sjmk_v1
+- **Researcher Dossiers:** https://jashory.github.io/hqas8-autonomous-agentic-governance/researchers.html
