@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jashory/mcp-agent-security-auditor",
+  "title": "MCP & Agent Security Auditor",
+  "description": "Deterministic zero-dependency AST, agent hook, MCP server config, and Firebase Rules security auditor with OWASP LLM01-LLM10 and SARIF v2.1.0 output.",
+  "version": "2.1.0",
+  "websiteUrl": "https://jashory.github.io/mcp-agent-security-auditor/",
+  "repository": {
+    "url": "https://github.com/jashory/mcp-agent-security-auditor",
+    "source": "github"
+  },
+  "_meta": {
+    "io.github.jashory/provenance": {
+      "author": "HM Shihabuddin Jashory",
+      "orcid": "https://orcid.org/0009-0003-4163-0092",
+      "wikidata": "https://www.wikidata.org/wiki/Q141910532",
+      "zenodoDoi": "10.5281/zenodo.23832725",
+      "organization": "Vision Flow Group (https://visionflowgroup.com)"
+    }
+  }
+}

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-agent-security-auditor"
-version = "2.0.0"
+version = "2.1.0"
 description = "Lightweight Fast Pre-Audit Security Scanner & Agent Skill for MCP Servers, Agent Hooks, and Firebase Rules"
 readme = "README.md"
 license = { text = "MIT" }

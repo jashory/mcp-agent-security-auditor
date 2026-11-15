@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it alongside its peer-archived specification below."
+title: "mcp-agent-security-auditor: Deterministic AST & Hook Security Scanner for MCP Servers and AI Agents"
+version: "2.1.0"
+date-released: "2026-11-15"
+license: "MIT"
+repository-code: "https://github.com/jashory/mcp-agent-security-auditor"
+url: "https://jashory.github.io/mcp-agent-security-auditor/"
+doi: "10.5281/zenodo.23832725"
+authors:
+  - family-names: "Jashory"
+    given-names: "HM Shihabuddin"
+    alias: "MD SHIHABUDDIN / HM Shihab"
+    orcid: "https://orcid.org/0009-0003-4163-0092"
+    affiliation: "Vision Flow Group (Wikidata Q141910527)"
+  - family-names: "Shubho"
+    given-names: "MD Rafiul Islam"
+    orcid: "https://orcid.org/0009-0009-9956-4511"
+    affiliation: "Vision Flow Group (Wikidata Q141910527)"
+keywords:
+  - mcp-security
+  - agentic-ai
+  - owasp-llm
+  - sarif
+  - static-analysis
+  - hqas-8
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Jashory"
+      given-names: "HM Shihabuddin"
+      orcid: "https://orcid.org/0009-0003-4163-0092"
+  title: "Empirical Security Analysis of Production AI Agent Frameworks, Cloud Data Pipelines, and Multimodal Trajectory Poisoning"
+  year: 2026
+  doi: "10.5281/zenodo.23832725"
+  url: "https://doi.org/10.5281/zenodo.23832725"
