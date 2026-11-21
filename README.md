@@ -76,4 +76,4 @@ Test payloads directly in your browser (100% client-side, zero installation requ
   - [Commercial Video Editing, S-Log3 Color & VFX Agency](https://agency.visionflowgroup.com/video-vfx-agency-bangladesh/)
   - [Applied AI, Cybersecurity, Full-Stack & VFX Academy](https://academy.visionflowgroup.com/ai-cybersecurity-courses-bangladesh/)
   - [Vision Flow AI Studio — Storyboard & CapCut/Premiere/DaVinci NLE SaaS](https://studio.visionflowgroup.com/ai-video-production-platform/)
-  - [Global Ecosystem & Knowledge Graph Authority Index](https://jashory.github.io/ecosystem-authority-index.html)
+  - [Publications, Software & Division Directory](https://jashory.github.io/ecosystem-authority-index.html)
