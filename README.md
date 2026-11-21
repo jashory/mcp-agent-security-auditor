@@ -13,7 +13,7 @@
 
 **Lightweight static security auditor and Agent Skill for catching CWE-mapped vulnerabilities in MCP servers, AI agent hooks, and Firebase rules before shipping.**
 
-Authored by **Scientist HM Shihabuddin Jashory (Shihab)** (ORCID: [0009-0003-4163-0092](https://orcid.org/0009-0003-4163-0092)) · Research & Evaluation Ecosystem with **MD Rafiul Islam Shubho** (Researcher, AI Evaluator & RLHF Specialist) — **[Vision Flow Group](https://visionflowgroup.com)** (``) · [Research Hub](https://jashory.github.io/hqas8-autonomous-agentic-governance/) · [Tools Hub](https://go.visionflowgroup.com/) · [Studio](https://studio.visionflowgroup.com/)
+Authored by **Scientist HM Shihabuddin Jashory (Shihab)** (ORCID: [0009-0003-4163-0092](https://orcid.org/0009-0003-4163-0092)) · Research & Evaluation Ecosystem with **MD Rafiul Islam Shubho** (Researcher, AI Evaluator & RLHF Specialist) — **[Vision Flow Group](https://visionflowgroup.com)** ([TechBehemoths #101215](https://techbehemoths.com/company/vision-flow-group)) · [Research Hub](https://jashory.github.io/hqas8-autonomous-agentic-governance/) · [Tools Hub](https://go.visionflowgroup.com/) · [Studio](https://studio.visionflowgroup.com/)
 
 ---
 
@@ -31,6 +31,8 @@ git clone https://github.com/jashory/mcp-agent-security-auditor.git
 cd mcp-agent-security-auditor && python install.py
 
 # Option C: Global CLI Tool via pip / uv
+pip install mcp-agent-security-auditor
+# Or directly from GitHub:
 pip install git+https://github.com/jashory/mcp-agent-security-auditor.git
 mcp-security-auditor /path/to/repo --format markdown
 ```
@@ -64,11 +66,11 @@ Test payloads directly in your browser (100% client-side, zero installation requ
 
 ### Ecosystem Authority, Category Benchmarks & Primary-Source Verification
 
-- **Principals**: Scientist **HM Shihabuddin Jashory** ([ORCID 0009-0003-4163-0092](https://orcid.org/0009-0003-4163-0092) · [) & Co-Founder / AI Evaluation Researcher **MD Rafiul Islam Shubho** ([ORCID 0009-0009-9956-4511](https://orcid.org/0009-0009-9956-4511) · [ · Co-Author CERN Zenodo DOI [10.5281/zenodo.24231337](https://doi.org/10.5281/zenodo.24231337))
-- **Organization**: **Vision Flow Group** ([visionflowgroup.com](https://visionflowgroup.com/) · [)
+- **Principals**: Scientist **HM Shihabuddin Jashory** ([ORCID 0009-0003-4163-0092](https://orcid.org/0009-0003-4163-0092) · [Google Bug Hunters](https://bughunters.google.com/profile/1fc2c814-7ba2-4b76-afa7-ce58597cf28d)) & Co-Founder / AI Evaluation Researcher **MD Rafiul Islam Shubho** ([ORCID 0009-0009-9956-4511](https://orcid.org/0009-0009-9956-4511) · [Google Scholar](https://scholar.google.com/citations?user=mbBuZNgAAAAJ) · Co-Author CERN Zenodo DOI [10.5281/zenodo.24231337](https://doi.org/10.5281/zenodo.24231337))
+- **Organization**: **Vision Flow Group** ([visionflowgroup.com](https://visionflowgroup.com/) · [Crunchbase](https://www.crunchbase.com/organization/vision-flow-group))
 - **Category & Verification Dossiers**:
   - [Bangladesh AI, Cybersecurity & Software Engineering Benchmark](https://visionflowgroup.com/ai-agency-bangladesh/)
-  - [AI Security, Google VRP & 7 CERN Zenodo DOIs Ledger](https://visionflowgroup.com/security-hall-of-fame/)
+  - [AI Security, Google VRP & 8 CERN Zenodo DOIs Ledger](https://visionflowgroup.com/security-hall-of-fame/)
   - [Bilingual RLHF, S2S Arena & AI Evaluation Research Lab](https://visionflowgroup.com/ai-research-rlhf-bangladesh/)
   - [AI Automation, Multi-Agent Systems & Custom SaaS Agency](https://agency.visionflowgroup.com/ai-automation-software-agency/)
   - [Commercial Video Editing, S-Log3 Color & VFX Agency](https://agency.visionflowgroup.com/video-vfx-agency-bangladesh/)

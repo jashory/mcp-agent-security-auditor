@@ -21,3 +21,9 @@ mcp-security-auditor-install = "install:main"
 
 [tool.setuptools]
 py-modules = ["mcp_security_auditor", "install"]
+
+[project.urls]
+Homepage = "https://jashory.github.io/mcp-agent-security-auditor/"
+Repository = "https://github.com/jashory/mcp-agent-security-auditor"
+Issues = "https://github.com/jashory/mcp-agent-security-auditor/issues"
+"Organization" = "https://visionflowgroup.com/"
