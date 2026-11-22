@@ -2,13 +2,30 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jashory/mcp-agent-security-auditor",
   "title": "MCP & Agent Security Auditor",
-  "description": "Deterministic zero-dependency AST, agent hook, MCP server config, and Firebase Rules security auditor with OWASP LLM01-LLM10 and SARIF v2.1.0 output.",
-  "version": "2.1.0",
+  "description": "Zero-dependency local Python AST & heuristic pre-audit stdio MCP server and CLI scanner for MCP tool schemas, command/path/deserialization sinks, prompt-injection markers, and Firebase rules with default secret redaction.",
+  "version": "2.2.0",
   "websiteUrl": "https://jashory.github.io/mcp-agent-security-auditor/",
   "repository": {
     "url": "https://github.com/jashory/mcp-agent-security-auditor",
     "source": "github"
   },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "mcp-agent-security-auditor",
+      "version": "2.2.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "python",
+      "packageArguments": [
+        {
+          "type": "named",
+          "name": "--mcp"
+        }
+      ]
+    }
+  ],
   "_meta": {
     "io.github.jashory/provenance": {
       "author": "HM Shihabuddin Jashory",

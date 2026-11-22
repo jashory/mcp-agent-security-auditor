@@ -1,0 +1,71 @@
+name: Cloud CI — AST, Action CLI & Stdio MCP Verification
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  verify-scanner-and-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify AST, 12 Rules, Action Flags, SARIF & Default Secret Redaction
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess, sys, tempfile
+
+          with tempfile.TemporaryDirectory() as tmp:
+              vuln_py = os.path.join(tmp, "tool_server.py")
+              with open(vuln_py, "w") as f:
+                  f.write(
+                      "import subprocess, yaml\n"
+                      "FAKE_PAT = 'ghp_' + 'A'*36\n"
+                      "@mcp.tool()\n"
+                      "def read_user_doc(user_path):\n"
+                      "    subprocess.run(user_path, shell=True)\n"
+                      "    yaml.load(user_path)\n"
+                      "    return open(user_path).read()\n"
+                  )
+              mcp_json = os.path.join(tmp, "mcp.json")
+              with open(mcp_json, "w") as f:
+                  json.dump({"tools": [{"name": "exec_cmd", "inputSchema": {"type": "object", "properties": {}}}]}, f)
+
+              # 1. Test Action CLI flags (--target + --ci -> must exit 1 on CRITICAL/HIGH)
+              p = subprocess.run([sys.executable, "mcp_security_auditor.py", "--target", tmp, "--ci"], capture_output=True, text=True)
+              assert p.returncode == 1, f"Expected exit 1 under --ci, got {p.returncode}: {p.stderr}"
+              rep = json.loads(p.stdout)
+              rule_ids = {x["rule_id"] for x in rep["findings"]}
+              for expected in ("MCP_SHELL_COMMAND_INJECTION", "MCP_UNSAFE_DESERIALIZATION", "MCP_PATH_TRAVERSAL_UNCHECKED", "MCP_TOOL_SCHEMA_UNCONSTRAINED", "HARDCODED_SECRET_TOKEN"):
+                  assert expected in rule_ids, f"Missing expected rule {expected} in {rule_ids}"
+              # Verify secret redaction (raw 36-A token must NOT appear in stdout)
+              assert ("ghp_" + "A"*36) not in p.stdout, "Raw secret leaked into output!"
+              assert "ghp_[REDACTED]" in p.stdout, "Expected redacted placeholder missing!"
+
+              # 2. Test SARIF output
+              ps = subprocess.run([sys.executable, "mcp_security_auditor.py", tmp, "--format", "sarif"], capture_output=True, text=True)
+              assert ps.returncode == 0
+              sarif = json.loads(ps.stdout)
+              assert sarif["version"] == "2.1.0"
+
+              # 3. Test Stdio MCP JSON-RPC 2.0 Server (initialize -> tools/list -> tools/call)
+              rpc_in = "\n".join([
+                  json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+                  json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+                  json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}),
+                  json.dumps({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "scan_path", "arguments": {"target": tmp}}}),
+              ]) + "\n"
+              pm = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_in, capture_output=True, text=True)
+              assert pm.returncode == 0, pm.stderr
+              lines = [json.loads(x) for x in pm.stdout.strip().splitlines()]
+              assert len(lines) == 3, lines
+              assert lines[0]["result"]["serverInfo"]["name"] == "mcp-agent-security-auditor"
+              tool_names = {t["name"] for t in lines[1]["result"]["tools"]}
+              assert {"scan_path", "list_security_rules"} == tool_names
+              scan_res = json.loads(lines[2]["result"]["content"][0]["text"])
+              assert scan_res["secrets_redacted"] is True and scan_res["total_findings"] >= 5
+              print("ALL CLOUD CI VERIFICATIONS PASSED:", rule_ids)
+          PY

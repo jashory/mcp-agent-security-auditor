@@ -1,5 +1,5 @@
 name: 'MCP & Agent Security Auditor'
-description: 'Audit Model Context Protocol (mcp.json) configs, agent hooks, and SKILL.md files for security risks.'
+description: 'Static Python AST + heuristic pre-audit scanner for MCP configs, agent hooks, and Firebase rules with redacted JSON/SARIF output.'
 author: 'HM Shihabuddin Jashory (@jashory)'
 branding:
   icon: 'lock'
@@ -10,17 +10,25 @@ inputs:
     required: false
     default: '.'
   ci:
-    description: 'Fail CI workflow if HIGH or CRITICAL vulnerabilities are detected'
+    description: 'Fail CI workflow if HIGH or CRITICAL findings are detected'
     required: false
     default: 'true'
+  format:
+    description: 'Output format: json, markdown, or sarif'
+    required: false
+    default: 'json'
 runs:
   using: 'composite'
   steps:
     - name: Run MCP & Agent Security Audit
       shell: bash
+      env:
+        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_CI: ${{ inputs.ci }}
+        INPUT_FORMAT: ${{ inputs.format }}
       run: |
-        if [ "${{ inputs.ci }}" = "true" ]; then
-          python3 "${{ github.action_path }}/mcp_security_auditor.py" --target "${{ inputs.target }}" --ci
-        else
-          python3 "${{ github.action_path }}/mcp_security_auditor.py" --target "${{ inputs.target }}"
+        ARGS=(--target "$INPUT_TARGET" --format "$INPUT_FORMAT")
+        if [ "$INPUT_CI" = "true" ]; then
+          ARGS+=(--ci)
         fi
+        python3 "${{ github.action_path }}/mcp_security_auditor.py" "${ARGS[@]}"
