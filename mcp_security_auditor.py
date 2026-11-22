@@ -150,7 +150,7 @@ REGEX_RULES = [
         "MCP_PATH_TRAVERSAL_UNCHECKED",
         {".ts", ".tsx", ".js", ".mjs", ".cjs"},
         re.compile(
-            r"fs\.(?:promises\.)?(?:readFile|readFileSync|writeFile|writeFileSync)\s*\(\s*(?!["'`])[a-zA-Z0-9_.\[\]]+"
+            r"""fs\.(?:promises\.)?(?:readFile|readFileSync|writeFile|writeFileSync)\s*\(\s*(?!["'`])[a-zA-Z0-9_.\[\]]+"""
         ),
     ),
     (
@@ -163,7 +163,7 @@ REGEX_RULES = [
     (
         "MCP_UNSAFE_DESERIALIZATION",
         {".ts", ".tsx", ".js", ".mjs", ".cjs"},
-        re.compile(r"(?:\beval\s*\(\s*(?!["'`])[a-zA-Z0-9_.]+|new\s+Function\s*\()"),
+        re.compile(r"""(?:\beval\s*\(\s*(?!["'`])[a-zA-Z0-9_.]+|new\s+Function\s*\()"""),
     ),
     (
         "MCP_PROMPT_INJECTION_SURFACE",
@@ -197,8 +197,8 @@ REGEX_RULES = [
         "INSECURE_CORS_WILDCARD_CREDENTIALS",
         {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".json"},
         re.compile(
-            r"Access-Control-Allow-Origin["']?\s*[:=]\s*["']\*["'][\s\S]{0,180}?"
-            r"Access-Control-Allow-Credentials["']?\s*[:=]\s*(?:true|["']true["'])",
+            r"""Access-Control-Allow-Origin["']?\s*[:=]\s*["']\*["'][\s\S]{0,180}?"""
+            r"""Access-Control-Allow-Credentials["']?\s*[:=]\s*(?:true|["']true["'])""",
             re.IGNORECASE,
         ),
     ),
@@ -271,7 +271,7 @@ class PythonSecurityASTVisitor(ast.NodeVisitor):
             return self.lines[lineno - 1].strip()
         return ""
 
-    def _is_tool_Function(self, node: ast.AST) -> bool:
+    def _is_tool_function(self, node: ast.AST) -> bool:
         decos = getattr(node, "decorator_list", [])
         for d in decos:
             src = ast.unparse(d) if hasattr(ast, "unparse") else ""
@@ -286,13 +286,17 @@ class PythonSecurityASTVisitor(ast.NodeVisitor):
         prev_params = self._fn_params
 
         args_obj = getattr(node, "args", None)
-        params = {a.arg for a in (getattr(args_obj, "args", []) + getattr(args_obj, "kwonlyargs", []))} if args_obj else set()
+        params = (
+            {a.arg for a in (getattr(args_obj, "args", []) + getattr(args_obj, "kwonlyargs", []))}
+            if args_obj
+            else set()
+        )
         body_dump = ast.unparse(node) if hasattr(ast, "unparse") else ""
         has_containment = any(
             guard in body_dump for guard in ("realpath", ".resolve(", "commonpath", "is_relative_to")
         )
 
-        self._in_tool_fn = prev_tool or self._is_tool_Function(node)
+        self._in_tool_fn = prev_tool or self._is_tool_function(node)
         self._fn_has_containment = has_containment
         self._fn_params = params
         self.generic_visit(node)
@@ -322,17 +326,38 @@ class PythonSecurityASTVisitor(ast.NodeVisitor):
             for kw in node.keywords:
                 if kw.arg == "shell" and isinstance(kw.value, ast.Constant) and kw.value.value is True:
                     self.findings.append(
-                        _make_finding("MCP_SHELL_COMMAND_INJECTION", self.fpath, lineno, snippet, "python-ast", self.include_raw_secrets)
+                        _make_finding(
+                            "MCP_SHELL_COMMAND_INJECTION",
+                            self.fpath,
+                            lineno,
+                            snippet,
+                            "python-ast",
+                            self.include_raw_secrets,
+                        )
                     )
         elif cname in {"os.system", "os.popen"}:
             if node.args and not isinstance(node.args[0], ast.Constant):
                 self.findings.append(
-                    _make_finding("MCP_SHELL_COMMAND_INJECTION", self.fpath, lineno, snippet, "python-ast", self.include_raw_secrets)
+                    _make_finding(
+                        "MCP_SHELL_COMMAND_INJECTION",
+                        self.fpath,
+                        lineno,
+                        snippet,
+                        "python-ast",
+                        self.include_raw_secrets,
+                    )
                 )
         elif cname in {"eval", "exec", "pickle.loads", "marshal.loads"}:
             if not (node.args and isinstance(node.args[0], ast.Constant)):
                 self.findings.append(
-                    _make_finding("MCP_UNSAFE_DESERIALIZATION", self.fpath, lineno, snippet, "python-ast", self.include_raw_secrets)
+                    _make_finding(
+                        "MCP_UNSAFE_DESERIALIZATION",
+                        self.fpath,
+                        lineno,
+                        snippet,
+                        "python-ast",
+                        self.include_raw_secrets,
+                    )
                 )
         elif cname == "yaml.load":
             safe_loader = False
@@ -343,20 +368,41 @@ class PythonSecurityASTVisitor(ast.NodeVisitor):
                         safe_loader = True
             if not safe_loader:
                 self.findings.append(
-                    _make_finding("MCP_UNSAFE_DESERIALIZATION", self.fpath, lineno, snippet, "python-ast", self.include_raw_secrets)
+                    _make_finding(
+                        "MCP_UNSAFE_DESERIALIZATION",
+                        self.fpath,
+                        lineno,
+                        snippet,
+                        "python-ast",
+                        self.include_raw_secrets,
+                    )
                 )
         elif self._in_tool_fn and not self._fn_has_containment:
             if cname == "open" and node.args and not isinstance(node.args[0], ast.Constant):
                 arg_src = ast.unparse(node.args[0]) if hasattr(ast, "unparse") else ""
                 if any(p in arg_src for p in self._fn_params):
                     self.findings.append(
-                        _make_finding("MCP_PATH_TRAVERSAL_UNCHECKED", self.fpath, lineno, snippet, "python-ast", self.include_raw_secrets)
+                        _make_finding(
+                            "MCP_PATH_TRAVERSAL_UNCHECKED",
+                            self.fpath,
+                            lineno,
+                            snippet,
+                            "python-ast",
+                            self.include_raw_secrets,
+                        )
                     )
             elif cname.endswith((".read_text", ".read_bytes", ".write_text", ".write_bytes")):
                 base_src = ast.unparse(node.func) if hasattr(ast, "unparse") else ""
                 if any(p in base_src for p in self._fn_params):
                     self.findings.append(
-                        _make_finding("MCP_PATH_TRAVERSAL_UNCHECKED", self.fpath, lineno, snippet, "python-ast", self.include_raw_secrets)
+                        _make_finding(
+                            "MCP_PATH_TRAVERSAL_UNCHECKED",
+                            self.fpath,
+                            lineno,
+                            snippet,
+                            "python-ast",
+                            self.include_raw_secrets,
+                        )
                     )
 
         self.generic_visit(node)
@@ -494,42 +540,50 @@ def format_markdown(report: Dict[str, Any]) -> str:
 def format_sarif(report: Dict[str, Any]) -> Dict[str, Any]:
     rules_sarif = []
     for rid, meta in RULE_METADATA.items():
-        rules_sarif.append({
-            "id": rid,
-            "name": meta["title"],
-            "shortDescription": {"text": meta["title"]},
-            "fullDescription": {"text": meta["description"]},
-            "help": {"text": meta["remediation"]},
-            "properties": {"tags": ["security", meta["cwe"]], "security-severity": meta["severity"]},
-        })
+        rules_sarif.append(
+            {
+                "id": rid,
+                "name": meta["title"],
+                "shortDescription": {"text": meta["title"]},
+                "fullDescription": {"text": meta["description"]},
+                "help": {"text": meta["remediation"]},
+                "properties": {"tags": ["security", meta["cwe"]], "security-severity": meta["severity"]},
+            }
+        )
     results_sarif = []
     level_map = {"CRITICAL": "error", "HIGH": "error", "MEDIUM": "warning", "LOW": "note"}
     for f in report["findings"]:
-        results_sarif.append({
-            "ruleId": f["rule_id"],
-            "level": level_map.get(f["severity"], "warning"),
-            "message": {"text": f"{f['title']} ({f['cwe']}): {f['snippet']}"},
-            "locations": [{
-                "physicalLocation": {
-                    "artifactLocation": {"uri": f["file"].replace("\\", "/")},
-                    "region": {"startLine": max(1, int(f["line"]))},
-                }
-            }],
-        })
+        results_sarif.append(
+            {
+                "ruleId": f["rule_id"],
+                "level": level_map.get(f["severity"], "warning"),
+                "message": {"text": f"{f['title']} ({f['cwe']}): {f['snippet']}"},
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {"uri": f["file"].replace("\\", "/")},
+                            "region": {"startLine": max(1, int(f["line"]))},
+                        }
+                    }
+                ],
+            }
+        )
     return {
         "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
         "version": "2.1.0",
-        "runs": [{
-            "tool": {
-                "driver": {
-                    "name": "mcp-agent-security-auditor",
-                    "version": VERSION,
-                    "informationUri": "https://github.com/jashory/mcp-agent-security-auditor",
-                    "rules": rules_sarif,
-                }
-            },
-            "results": results_sarif,
-        }],
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "mcp-agent-security-auditor",
+                        "version": VERSION,
+                        "informationUri": "https://github.com/jashory/mcp-agent-security-auditor",
+                        "rules": rules_sarif,
+                    }
+                },
+                "results": results_sarif,
+            }
+        ],
     }
 
 
@@ -538,7 +592,10 @@ def run_mcp_server() -> int:
     tools_spec = [
         {
             "name": "scan_path",
-            "description": "Run static Python AST, MCP schema, prompt-injection, and Firebase rules security scan on a local directory or file (secrets redacted by default).",
+            "description": (
+                "Run static Python AST, MCP schema, prompt-injection, and Firebase rules "
+                "security scan on a local directory or file (secrets redacted by default)."
+            ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
@@ -572,7 +629,6 @@ def run_mcp_server() -> int:
         method = msg.get("method")
         msg_id = msg.get("id")
         if msg_id is None:
-            # JSON-RPC notification (e.g. notifications/initialized)
             continue
 
         if method == "initialize":
@@ -631,12 +687,33 @@ def build_arg_parser() -> argparse.ArgumentParser:
         description="Static Python AST + heuristic pre-audit scanner and stdio MCP server for MCP tools, agent hooks, and Firebase rules.",
     )
     parser.add_argument("positional_target", nargs="?", default=None, help="Directory or file path to scan")
-    parser.add_argument("--target", "-t", dest="flag_target", default=None, help="Directory or file path to scan (GitHub Action & CLI compatible)")
-    parser.add_argument("--format", "-f", choices=["json", "markdown", "sarif"], default="json", help="Output report format (default: json)")
+    parser.add_argument(
+        "--target",
+        "-t",
+        dest="flag_target",
+        default=None,
+        help="Directory or file path to scan (GitHub Action & CLI compatible)",
+    )
+    parser.add_argument(
+        "--format",
+        "-f",
+        choices=["json", "markdown", "sarif"],
+        default="json",
+        help="Output report format (default: json)",
+    )
     parser.add_argument("--output", "-o", default=None, help="Optional file path to write report output")
     parser.add_argument("--ci", action="store_true", help="Exit with code 1 if HIGH or CRITICAL findings are detected")
-    parser.add_argument("--fail-on", choices=["LOW", "MEDIUM", "HIGH", "CRITICAL"], default=None, help="Exit with code 1 if findings at or above this severity exist")
-    parser.add_argument("--include-raw-secrets", action="store_true", help="Disable default secret-value redaction in output snippets (use with caution)")
+    parser.add_argument(
+        "--fail-on",
+        choices=["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+        default=None,
+        help="Exit with code 1 if findings at or above this severity exist",
+    )
+    parser.add_argument(
+        "--include-raw-secrets",
+        action="store_true",
+        help="Disable default secret-value redaction in output snippets (use with caution)",
+    )
     parser.add_argument("--mcp", action="store_true", help="Run as a stdio JSON-RPC 2.0 MCP server")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     return parser

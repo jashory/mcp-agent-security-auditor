@@ -30,28 +30,31 @@ jobs:
                       "    yaml.load(user_path)\n"
                       "    return open(user_path).read()\n"
                   )
+              # Also write a realistic literal token fixture to test secret redaction
+              env_file = os.path.join(tmp, ".env")
+              with open(env_file, "w") as f:
+                  f.write("GITHUB_TOKEN=" + "ghp_" + ("A" * 36) + "\n")
               mcp_json = os.path.join(tmp, "mcp.json")
               with open(mcp_json, "w") as f:
                   json.dump({"tools": [{"name": "exec_cmd", "inputSchema": {"type": "object", "properties": {}}}]}, f)
 
-              # 1. Test Action CLI flags (--target + --ci -> must exit 1 on CRITICAL/HIGH)
               p = subprocess.run([sys.executable, "mcp_security_auditor.py", "--target", tmp, "--ci"], capture_output=True, text=True)
-              assert p.returncode == 1, f"Expected exit 1 under --ci, got {p.returncode}: {p.stderr}"
+              if p.returncode != 1 or not p.stdout.strip():
+                  print("STDOUT:", p.stdout)
+                  print("STDERR:", p.stderr)
+                  sys.exit(1)
               rep = json.loads(p.stdout)
               rule_ids = {x["rule_id"] for x in rep["findings"]}
               for expected in ("MCP_SHELL_COMMAND_INJECTION", "MCP_UNSAFE_DESERIALIZATION", "MCP_PATH_TRAVERSAL_UNCHECKED", "MCP_TOOL_SCHEMA_UNCONSTRAINED", "HARDCODED_SECRET_TOKEN"):
                   assert expected in rule_ids, f"Missing expected rule {expected} in {rule_ids}"
-              # Verify secret redaction (raw 36-A token must NOT appear in stdout)
               assert ("ghp_" + "A"*36) not in p.stdout, "Raw secret leaked into output!"
               assert "ghp_[REDACTED]" in p.stdout, "Expected redacted placeholder missing!"
 
-              # 2. Test SARIF output
               ps = subprocess.run([sys.executable, "mcp_security_auditor.py", tmp, "--format", "sarif"], capture_output=True, text=True)
-              assert ps.returncode == 0
+              assert ps.returncode == 0, ps.stderr
               sarif = json.loads(ps.stdout)
               assert sarif["version"] == "2.1.0"
 
-              # 3. Test Stdio MCP JSON-RPC 2.0 Server (initialize -> tools/list -> tools/call)
               rpc_in = "\n".join([
                   json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
                   json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
@@ -67,5 +70,5 @@ jobs:
               assert {"scan_path", "list_security_rules"} == tool_names
               scan_res = json.loads(lines[2]["result"]["content"][0]["text"])
               assert scan_res["secrets_redacted"] is True and scan_res["total_findings"] >= 5
-              print("ALL CLOUD CI VERIFICATIONS PASSED:", rule_ids)
+              print("ALL CLOUD CI VERIFICATIONS PASSED:", sorted(rule_ids))
           PY
