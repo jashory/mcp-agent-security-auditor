@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mcp-agent-security-auditor"
-version = "2.2.0"
+version = "2.2.1"
 description = "Zero-dependency Python AST & heuristic pre-audit CLI scanner, GitHub Action, Agent Skill, and stdio MCP server for MCP tools, agent hooks, and Firebase rules"
 readme = "README.md"
 license = { text = "MIT" }

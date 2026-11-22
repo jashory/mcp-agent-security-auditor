@@ -79,3 +79,5 @@ Test payloads directly in your browser (100% client-side, zero installation requ
   - [Applied AI, Cybersecurity, Full-Stack & VFX Academy](https://academy.visionflowgroup.com/ai-cybersecurity-courses-bangladesh/)
   - [Vision Flow AI Studio — Storyboard & CapCut/Premiere/DaVinci NLE SaaS](https://studio.visionflowgroup.com/ai-video-production-platform/)
   - [Publications, Software & Division Directory](https://jashory.github.io/ecosystem-authority-index.html)
+
+<!-- mcp-name: io.github.jashory/mcp-agent-security-auditor -->

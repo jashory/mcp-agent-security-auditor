@@ -3,7 +3,7 @@
   "name": "io.github.jashory/mcp-agent-security-auditor",
   "title": "MCP & Agent Security Auditor",
   "description": "Zero-dependency local Python AST & heuristic pre-audit stdio MCP server and CLI scanner for MCP tool schemas, command/path/deserialization sinks, prompt-injection markers, and Firebase rules with default secret redaction.",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "websiteUrl": "https://jashory.github.io/mcp-agent-security-auditor/",
   "repository": {
     "url": "https://github.com/jashory/mcp-agent-security-auditor",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "mcp-agent-security-auditor",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "transport": {
         "type": "stdio"
       },
@@ -25,13 +25,5 @@
         }
       ]
     }
-  ],
-  "_meta": {
-    "io.github.jashory/provenance": {
-      "author": "HM Shihabuddin Jashory",
-      "orcid": "https://orcid.org/0009-0003-4163-0092",
-      "zenodoDoi": "10.5281/zenodo.23832725",
-      "organization": "Vision Flow Group (https://visionflowgroup.com)"
-    }
-  }
+  ]
 }
