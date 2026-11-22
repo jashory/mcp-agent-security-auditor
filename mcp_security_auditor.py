@@ -201,7 +201,7 @@ REGEX_RULES = [
         re.compile(
             r"(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{22,}|"
             r"sk-(?:proj-|ant-|live_|test_)?[A-Za-z0-9_-]{20,}|hf_[A-Za-z0-9]{20,}|"
-            r"AIza[0-9A-Za-z_-]{35}|(?:AKIA|ASIA)[0-9A-Z]{16}|"
+            r"AIza[0-9A-Za-z_-]{33,40}|(?:AKIA|ASIA)[0-9A-Z]{16}|"
             r"ATATT3xFfGF0[A-Za-z0-9_=-]{20,}|xox[baprs]-[A-Za-z0-9-]{16,}|"
             r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)"
         ),

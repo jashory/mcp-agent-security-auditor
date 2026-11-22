@@ -67,7 +67,7 @@ jobs:
               assert len(lines) == 3, lines
               assert lines[0]["result"]["serverInfo"]["name"] == "mcp-agent-security-auditor"
               tool_names = {t["name"] for t in lines[1]["result"]["tools"]}
-              assert {"scan_path", "list_security_rules"} == tool_names
+              assert {"scan_path", "list_security_rules", "remediate_path"} <= tool_names
               scan_res = json.loads(lines[2]["result"]["content"][0]["text"])
               assert scan_res["secrets_redacted"] is True and scan_res["total_findings"] >= 5
               print("ALL CLOUD CI VERIFICATIONS PASSED:", sorted(rule_ids))
