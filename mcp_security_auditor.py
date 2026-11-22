@@ -170,8 +170,9 @@ REGEX_RULES = [
         {".md", ".json"},
         re.compile(
             r"(?:[\u200b\u200c\u200d\u202a-\u202e\u2066-\u2069]|"
-            r"(?i)ignore\s+(?:all\s+)?previous\s+instructions|"
-            r"(?i)<important>[\s\S]{0,160}?(?:exfiltrate|curl\s+|~/.ssh|env\b))"
+            r"ignore\s+(?:all\s+)?previous\s+instructions|"
+            r"<important>[\s\S]{0,160}?(?:exfiltrate|curl\s+|~/.ssh|env\b))",
+            re.IGNORECASE,
         ),
     ),
     (
