@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.jashory/mcp-agent-security-auditor",
   "title": "MCP & Agent Security Auditor",
-  "description": "Zero-dependency local Python AST & heuristic pre-audit stdio MCP server and CLI scanner for MCP tool schemas, command/path/deserialization sinks, prompt-injection markers, and Firebase rules with default secret redaction.",
+  "description": "Static AST and config security scanner for MCP servers, Claude Code hooks, and Firebase rules.",
   "version": "2.2.1",
   "websiteUrl": "https://jashory.github.io/mcp-agent-security-auditor/",
   "repository": {
