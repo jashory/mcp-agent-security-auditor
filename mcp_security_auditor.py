@@ -22,14 +22,17 @@ import re
 import sys
 from typing import Any, Dict, List, Optional
 
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 
 SECRET_REDACT_PATTERNS = [
     (re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"), "ghp_[REDACTED]"),
     (re.compile(r"github_pat_[A-Za-z0-9_]{20,}"), "github_pat_[REDACTED]"),
-    (re.compile(r"sk-[A-Za-z0-9_-]{20,}"), "sk-[REDACTED]"),
+    (re.compile(r"sk-(?:proj-|ant-|live_|test_)?[A-Za-z0-9_-]{20,}"), "sk-[REDACTED]"),
+    (re.compile(r"hf_[A-Za-z0-9]{20,}"), "hf_[REDACTED]"),
     (re.compile(r"AIza[0-9A-Za-z_-]{30,}"), "AIza[REDACTED]"),
-    (re.compile(r"AKIA[0-9A-Z]{16}"), "AKIA[REDACTED]"),
+    (re.compile(r"(?:AKIA|ASIA)[0-9A-Z]{16}"), "AKIA[REDACTED]"),
+    (re.compile(r"ATATT3xFfGF0[A-Za-z0-9_=-]{20,}"), "ATATT[REDACTED]"),
+    (re.compile(r"xox[baprs]-[A-Za-z0-9-]{16,}"), "xox[REDACTED]"),
     (
         re.compile(
             r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----[\s\S]*?"
@@ -115,11 +118,18 @@ RULE_METADATA: Dict[str, Dict[str, str]] = {
         "remediation": "Require `request.auth != null` and document-owner or role checks.",
     },
     "HARDCODED_SECRET_TOKEN": {
-        "severity": "HIGH",
+        "severity": "CRITICAL",
         "cwe": "CWE-798",
-        "title": "Hardcoded API Token or Private Key in Source",
-        "description": "Contains a hardcoded API token (GitHub PAT, OpenAI/Google/AWS key) or PEM private key.",
-        "remediation": "Load secrets from environment variables or a secret manager and rotate exposed credentials.",
+        "title": "Hardcoded API Token or Private Key in Source / HTML",
+        "description": "Contains a hardcoded API token (GitHub PAT, OpenAI/Anthropic/Google/Firebase/HuggingFace/AWS/Atlassian/Slack key) or PEM private key across source or HTML files.",
+        "remediation": "Load secrets from environment variables or a secret manager, or run `mcp-security-auditor --fix` to redact exposed credentials before git push.",
+    },
+    "PRIVATE_SPA_PUBLIC_REPO_LEAK": {
+        "severity": "CRITICAL",
+        "cwe": "CWE-200",
+        "title": "Private SPA Bundle / _BUILTIN_FB Config Leaked Into Public Pages Artifact",
+        "description": "Contains internal SPA markers (`_BUILTIN_FB` or `site/admin-engine.js`) inside an HTML file intended for a public static or GitHub Pages repository.",
+        "remediation": "Keep the public Pages root `index.html` as a clean static redirect/landing page and never overwrite it from the private SPA source repository.",
     },
     "INSECURE_CORS_WILDCARD_CREDENTIALS": {
         "severity": "MEDIUM",
@@ -187,16 +197,23 @@ REGEX_RULES = [
     ),
     (
         "HARDCODED_SECRET_TOKEN",
-        {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".json", ".yml", ".yaml", ".env"},
+        {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".json", ".yml", ".yaml", ".env", ".html", ".htm", ".xml", ".svg", ".toml"},
         re.compile(
-            r"(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{25,}|"
-            r"sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|AKIA[0-9A-Z]{16}|"
+            r"(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{22,}|"
+            r"sk-(?:proj-|ant-|live_|test_)?[A-Za-z0-9_-]{20,}|hf_[A-Za-z0-9]{20,}|"
+            r"AIza[0-9A-Za-z_-]{35}|(?:AKIA|ASIA)[0-9A-Z]{16}|"
+            r"ATATT3xFfGF0[A-Za-z0-9_=-]{20,}|xox[baprs]-[A-Za-z0-9-]{16,}|"
             r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)"
         ),
     ),
     (
+        "PRIVATE_SPA_PUBLIC_REPO_LEAK",
+        {".html", ".htm"},
+        re.compile(r"(?:_BUILTIN_FB\s*=|site/admin-engine\.js)"),
+    ),
+    (
         "INSECURE_CORS_WILDCARD_CREDENTIALS",
-        {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".json"},
+        {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".json", ".html", ".htm"},
         re.compile(
             r"""Access-Control-Allow-Origin["']?\s*[:=]\s*["']\*["'][\s\S]{0,180}?"""
             r"""Access-Control-Allow-Credentials["']?\s*[:=]\s*(?:true|["']true["'])""",
@@ -206,7 +223,7 @@ REGEX_RULES = [
 ]
 
 SEVERITY_ORDER = {"LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
-SCANNABLE_EXTS = {".ts", ".tsx", ".js", ".cjs", ".mjs", ".py", ".json", ".rules", ".md", ".yml", ".yaml", ".env"}
+SCANNABLE_EXTS = {".ts", ".tsx", ".js", ".cjs", ".mjs", ".py", ".json", ".rules", ".md", ".yml", ".yaml", ".env", ".html", ".htm", ".xml", ".svg", ".toml"}
 
 
 def redact_snippet(text: str, include_raw_secrets: bool = False) -> str:
@@ -520,6 +537,62 @@ def scan_directory(target_dir: str) -> Dict[str, Any]:
     return scan_path(target_dir, include_raw_secrets=False)
 
 
+def auto_remediate_path(target_path: str) -> Dict[str, Any]:
+    """Automatically redact hardcoded secrets or restore clean static redirect index.html in public Pages clones."""
+    report = scan_path(target_path, include_raw_secrets=False)
+    files_to_fix: Dict[str, set[str]] = {}
+    for f in report["findings"]:
+        if f["rule_id"] in {"HARDCODED_SECRET_TOKEN", "PRIVATE_SPA_PUBLIC_REPO_LEAK"}:
+            files_to_fix.setdefault(f["file"], set()).add(f["rule_id"])
+
+    fixed_files: List[Dict[str, Any]] = []
+    for fpath, rules_hit in files_to_fix.items():
+        try:
+            with open(fpath, "r", encoding="utf-8", errors="ignore") as fp:
+                raw = fp.read()
+        except OSError:
+            continue
+
+        norm_f = fpath.replace("\\", "/").lower()
+        if "PRIVATE_SPA_PUBLIC_REPO_LEAK" in rules_hit and norm_f.endswith("/index.html") and "vf_gh_pages_repo" in norm_f:
+            import subprocess
+            try:
+                clean_html = subprocess.check_output(
+                    ["git", "-C", os.path.dirname(fpath), "show", "8692ce6c:index.html"],
+                    stderr=subprocess.DEVNULL,
+                ).decode("utf-8", "ignore")
+                clean_html = clean_html.replace("?v=20261122", "?v=20261122b")
+            except Exception:
+                clean_html = (
+                    '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+                    '<meta http-equiv="refresh" content="0;url=https://agency.visionflowgroup.com/">'
+                    '<link rel="canonical" href="https://agency.visionflowgroup.com/">'
+                    "<title>Vision Flow Group</title></head><body>"
+                    '<script>location.replace("https://agency.visionflowgroup.com/");</script></body></html>\n'
+                )
+            with open(fpath, "w", encoding="utf-8") as fp:
+                fp.write(clean_html)
+            fixed_files.append({"file": fpath, "action": "restored_clean_static_redirect_index_html"})
+        else:
+            healed = raw
+            for pat, repl in SECRET_REDACT_PATTERNS:
+                healed = pat.sub(repl, healed)
+            if healed != raw:
+                with open(fpath, "w", encoding="utf-8") as fp:
+                    fp.write(healed)
+                fixed_files.append({"file": fpath, "action": "redacted_hardcoded_secrets_in_place"})
+
+    after_report = scan_path(target_path, include_raw_secrets=False)
+    return {
+        "scanner_version": VERSION,
+        "target_dir": target_path,
+        "files_remediated": len(fixed_files),
+        "remediation_actions": fixed_files,
+        "before_findings": report["total_findings"],
+        "after_findings": after_report["total_findings"],
+    }
+
+
 def format_markdown(report: Dict[str, Any]) -> str:
     out = [
         f"# MCP & Agent Security Audit Report (v{report['scanner_version']})",
@@ -609,10 +682,22 @@ def run_mcp_server() -> int:
         },
         {
             "name": "list_security_rules",
-            "description": "List all 12 CWE-mapped static security rules implemented by mcp-agent-security-auditor.",
+            "description": "List all 13 CWE-mapped static security rules implemented by mcp-agent-security-auditor.",
             "inputSchema": {
                 "type": "object",
                 "properties": {},
+                "additionalProperties": False,
+            },
+        },
+        {
+            "name": "remediate_path",
+            "description": "Automatically redact hardcoded secrets or restore clean static redirect index.html in a local directory or file before git push.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "target": {"type": "string", "description": "Local directory or file path to auto-remediate."},
+                },
+                "required": ["target"],
                 "additionalProperties": False,
             },
         },
@@ -664,6 +749,14 @@ def run_mcp_server() -> int:
                 else:
                     text_out = json.dumps(report, indent=2)
                 resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"content": [{"type": "text", "text": text_out}]}}
+            elif tname == "remediate_path":
+                target = str(targs.get("target") or ".")
+                res_fix = auto_remediate_path(target)
+                resp = {
+                    "jsonrpc": "2.0",
+                    "id": msg_id,
+                    "result": {"content": [{"type": "text", "text": json.dumps(res_fix, indent=2)}]},
+                }
             else:
                 resp = {
                     "jsonrpc": "2.0",
@@ -715,6 +808,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Disable default secret-value redaction in output snippets (use with caution)",
     )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="Automatically redact hardcoded secrets or restore clean static redirect index.html before git push",
+    )
+    parser.add_argument(
+        "--pre-push",
+        action="store_true",
+        help="Run in Git pre-commit/pre-push guard mode (auto-fixes private SPA leaks and exits 1 if unredacted HIGH/CRITICAL findings remain)",
+    )
     parser.add_argument("--mcp", action="store_true", help="Run as a stdio JSON-RPC 2.0 MCP server")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     return parser
@@ -728,6 +831,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return run_mcp_server()
 
     target = args.flag_target or args.positional_target or "."
+    if args.fix or args.pre_push:
+        fix_report = auto_remediate_path(target)
+        if args.fix and not args.pre_push:
+            print(json.dumps(fix_report, indent=2, ensure_ascii=False))
+            return 0
+
     report = scan_path(target, include_raw_secrets=args.include_raw_secrets)
 
     if args.format == "markdown":
@@ -743,7 +852,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     else:
         print(rendered)
 
-    threshold = args.fail_on or ("HIGH" if args.ci else None)
+    threshold = args.fail_on or ("HIGH" if (args.ci or args.pre_push) else None)
     if threshold:
         min_rank = SEVERITY_ORDER[threshold]
         blocking = [f for f in report["findings"] if SEVERITY_ORDER.get(f["severity"], 0) >= min_rank]

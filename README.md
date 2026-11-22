@@ -1,8 +1,8 @@
-# 🔒 AI Agent, MCP & Firebase Pre-Audit Security Scanner (v2.2.0)
+# 🔒 AI Agent, MCP & Firebase Pre-Audit Security Scanner (v2.3.0)
 
 <p align="center">
   <a href="https://jashory.github.io/mcp-agent-security-auditor/"><img src="https://img.shields.io/badge/Live_Browser_Playground-Try_Now-22C55E?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Browser Playground"/></a>
-  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.2.0"><img src="https://img.shields.io/badge/Release-v2.2.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.2.0"/></a>
+  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.3.0"><img src="https://img.shields.io/badge/Release-v2.3.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.3.0"/></a>
   <a href="https://github.com/jashory/mcp-agent-security-auditor/blob/main/action.yml"><img src="https://img.shields.io/badge/GitHub_Action-Ready-F59E0B?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Action Ready"/></a>
 </p>
 
