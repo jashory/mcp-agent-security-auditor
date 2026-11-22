@@ -1,8 +1,8 @@
-# 🔒 AI Agent, MCP & Firebase Pre-Audit Security Scanner (v2.0)
+# 🔒 AI Agent, MCP & Firebase Pre-Audit Security Scanner (v2.2.0)
 
 <p align="center">
   <a href="https://jashory.github.io/mcp-agent-security-auditor/"><img src="https://img.shields.io/badge/Live_Browser_Playground-Try_Now-22C55E?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Browser Playground"/></a>
-  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.0.0"><img src="https://img.shields.io/badge/Release-v2.0.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.0.0"/></a>
+  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.2.0"><img src="https://img.shields.io/badge/Release-v2.2.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.2.0"/></a>
   <a href="https://github.com/jashory/mcp-agent-security-auditor/blob/main/action.yml"><img src="https://img.shields.io/badge/GitHub_Action-Ready-F59E0B?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Action Ready"/></a>
 </p>
 
@@ -34,7 +34,9 @@ cd mcp-agent-security-auditor && python install.py
 pip install mcp-agent-security-auditor
 # Or directly from GitHub:
 pip install git+https://github.com/jashory/mcp-agent-security-auditor.git
-mcp-security-auditor /path/to/repo --format markdown
+mcp-security-auditor --target /path/to/repo --format sarif --ci
+# Run as a stdio JSON-RPC 2.0 MCP server:
+mcp-security-auditor --mcp
 ```
 
 ---
@@ -54,7 +56,7 @@ Use `mcp-agent-security-auditor` directly inside any CI/CD workflow:
 
 ```yaml
 - name: Run mcp-agent-security-auditor
-  uses: jashory/mcp-agent-security-auditor@v2.0.0
+  uses: jashory/mcp-agent-security-auditor@v2.2.0
 ```
 
 ## Live Interactive Browser Playground
