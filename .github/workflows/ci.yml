@@ -73,7 +73,41 @@ jobs:
               assert lines[3]["result"]["prompts"] == []
               scan_res = json.loads(lines[4]["result"]["content"][0]["text"])
               assert scan_res["secrets_redacted"] is True and scan_res["total_findings"] >= 5
-              print("PYTHON + STDIO MCP CHECKS PASSED:", sorted(rule_ids))
+
+              # Verify v2.4.1 remediate_path safety: outside-cwd blocked, inside-cwd dry_run default & .bak backup
+              rpc_rem_out = "\n".join([
+                  json.dumps({"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": tmp}}}),
+              ]) + "\n"
+              pm_out = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_rem_out, capture_output=True, text=True)
+              out_msg = json.loads(pm_out.stdout.strip().splitlines()[0])
+              assert "error" in out_msg, f"Expected workspace containment error for outside-cwd tmp: {out_msg}"
+
+              ws_sub = os.path.join(os.getcwd(), "_ci_rem_test")
+              os.makedirs(ws_sub, exist_ok=True)
+              try:
+                  secret_f = os.path.join(ws_sub, "sample.env")
+                  orig_secret = "API_TOKEN=" + "ghp_" + ("B" * 36) + "\n"
+                  with open(secret_f, "w") as sf:
+                      sf.write(orig_secret)
+                  rpc_rem_in = "\n".join([
+                      json.dumps({"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": ws_sub}}}),
+                      json.dumps({"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": ws_sub, "apply": True}}}),
+                  ]) + "\n"
+                  pm_in = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_rem_in, capture_output=True, text=True)
+                  in_lines = [json.loads(x) for x in pm_in.stdout.strip().splitlines()]
+                  dry_res = json.loads(in_lines[0]["result"]["content"][0]["text"])
+                  assert dry_res["dry_run"] is True and dry_res["files_previewed"] == 1 and not os.path.exists(secret_f + ".bak")
+                  app_res = json.loads(in_lines[1]["result"]["content"][0]["text"])
+                  assert app_res["dry_run"] is False and app_res["files_remediated"] == 1 and os.path.exists(secret_f + ".bak")
+                  assert open(secret_f + ".bak").read() == orig_secret
+                  assert "ghp_[REDACTED]" in open(secret_f).read()
+              finally:
+                  import shutil as _sh
+                  _sh.rmtree(ws_sub, ignore_errors=True)
+
+              src_code = open("mcp_security_auditor.py", encoding="utf-8").read()
+              assert "vf_gh_pages_repo" not in src_code and "8692ce6c" not in src_code
+              print("PYTHON + STDIO MCP + REMEDIATE SAFETY CHECKS PASSED:", sorted(rule_ids))
           PY
 
       - name: Build Docker Image & Verify Live Stdio MCP Protocol Inside Container (Glama Inspector Check)

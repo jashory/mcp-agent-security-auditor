@@ -3,7 +3,7 @@
   "name": "io.github.jashory/mcp-agent-security-auditor",
   "title": "MCP & Agent Security Auditor (MCP Server)",
   "description": "Stdio Model Context Protocol (MCP) server and zero-dependency Python AST security scanner for auditing MCP servers, AI agent hooks, and Firebase rules.",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "websiteUrl": "https://jashory.github.io/mcp-agent-security-auditor/",
   "repository": {
     "url": "https://github.com/jashory/mcp-agent-security-auditor",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "mcp-agent-security-auditor",
-      "version": "2.4.0",
+      "version": "2.4.1",
       "transport": {
         "type": "stdio"
       },

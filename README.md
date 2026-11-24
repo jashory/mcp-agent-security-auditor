@@ -1,4 +1,4 @@
-# 🔒 MCP & Agent Security Auditor — Stdio MCP Server, Python AST Scanner & GitHub Action (v2.4.0)
+# 🔒 MCP & Agent Security Auditor — Stdio MCP Server, Python AST Scanner & GitHub Action (v2.4.1)
 
 <p align="center">
   <a href="https://glama.ai/mcp/servers/jashory/mcp-agent-security-auditor"><img src="https://glama.ai/mcp/servers/jashory/mcp-agent-security-auditor/badges/score.svg" alt="jashory/mcp-agent-security-auditor MCP server"/></a>
@@ -6,7 +6,8 @@
 
 <p align="center">
   <a href="https://jashory.github.io/mcp-agent-security-auditor/"><img src="https://img.shields.io/badge/Live_Browser_Playground-Try_Now-22C55E?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Browser Playground"/></a>
-  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.4.0"><img src="https://img.shields.io/badge/Release-v2.4.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.4.0"/></a>
+  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.4.1"><img src="https://img.shields.io/badge/Release-v2.4.1-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.4.1"/></a>
+  <a href="https://m8ven.ai/mcp/jashory/mcp-agent-security-auditor"><img src="https://img.shields.io/badge/M8ven_Trust_Index-Verified-10B981?style=for-the-badge" alt="M8ven Trust Index"/></a>
   <a href="https://github.com/jashory/mcp-agent-security-auditor/blob/main/action.yml"><img src="https://img.shields.io/badge/GitHub_Action-Ready-F59E0B?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Action Ready"/></a>
   <a href="https://github.com/jashory/mcp-agent-security-auditor/blob/main/Dockerfile"><img src="https://img.shields.io/badge/MCP_Server-Stdio_%26_Docker-8B5CF6?style=for-the-badge&logo=docker&logoColor=white" alt="MCP Server Stdio and Docker"/></a>
 </p>
@@ -30,7 +31,7 @@ Authored by **Scientist HM Shihabuddin Jashory (Shihab)** (ORCID: [0009-0003-416
 | :--- | :--- | :--- |
 | `scan_path` | `target` (required string), `format` (`json` \| `markdown` \| `sarif`) | Runs Python AST + JSON schema + heuristic security audit on any local directory or file with automatic secret redaction enabled by default. |
 | `list_security_rules` | `{}` | Returns all 13 CWE-mapped static security rules, severities, descriptions, and remediation playbooks. |
-| `remediate_path` | `target` (required string) | Auto-redacts leaked secret tokens or restores clean static redirect HTML prior to `git push`. |
+| `remediate_path` | `target` (required string), `apply` (optional boolean, default `false`), `backup` (optional boolean, default `true`) | Previews (`apply=false`) or applies (`apply=true`, writing `<file>.bak` backups) workspace-contained in-place redaction of matched secret tokens (`HARDCODED_SECRET_TOKEN`). |
 
 ### MCP Client Configuration (`claude_desktop_config.json`, Cursor, Kiro, Windsurf)
 ```json
@@ -100,7 +101,7 @@ Use `mcp-agent-security-auditor` directly inside any CI/CD workflow:
 
 ```yaml
 - name: Run mcp-agent-security-auditor
-  uses: jashory/mcp-agent-security-auditor@v2.4.0
+  uses: jashory/mcp-agent-security-auditor@v2.4.1
   with:
     target: '.'
     format: 'sarif'

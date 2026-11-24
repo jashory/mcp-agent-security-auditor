@@ -22,7 +22,7 @@ import re
 import sys
 from typing import Any, Dict, List, Optional
 
-VERSION = "2.4.0"
+VERSION = "2.4.1"
 
 SECRET_REDACT_PATTERNS = [
     (re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"), "ghp_[REDACTED]"),
@@ -537,56 +537,91 @@ def scan_directory(target_dir: str) -> Dict[str, Any]:
     return scan_path(target_dir, include_raw_secrets=False)
 
 
-def auto_remediate_path(target_path: str) -> Dict[str, Any]:
-    """Automatically redact hardcoded secrets or restore clean static redirect index.html in public Pages clones."""
-    report = scan_path(target_path, include_raw_secrets=False)
+def _resolve_contained_target(target_path: str, allow_outside_cwd: bool = False) -> str:
+    """Resolve canonical realpath and enforce workspace containment unless explicitly overridden on local CLI."""
+    real_target = os.path.realpath(target_path)
+    if not allow_outside_cwd:
+        real_cwd = os.path.realpath(os.getcwd())
+        try:
+            common = os.path.commonpath([real_cwd, real_target])
+        except ValueError as exc:
+            raise PermissionError(f"Refusing cross-drive target outside workspace '{real_cwd}': {real_target}") from exc
+        if common != real_cwd:
+            raise PermissionError(
+                f"Refusing remediation outside current workspace '{real_cwd}': {real_target} "
+                "(pass --allow-outside-cwd on the local CLI if intentional)."
+            )
+    return real_target
+
+
+def auto_remediate_path(
+    target_path: str,
+    dry_run: bool = True,
+    create_backup: bool = True,
+    allow_outside_cwd: bool = False,
+) -> Dict[str, Any]:
+    """Preview (default dry_run=True) or apply in-place secret-token redaction within a canonical workspace boundary."""
+    real_target = _resolve_contained_target(target_path, allow_outside_cwd=allow_outside_cwd)
+    report = scan_path(real_target, include_raw_secrets=False)
     files_to_fix: Dict[str, set[str]] = {}
     for f in report["findings"]:
-        if f["rule_id"] in {"HARDCODED_SECRET_TOKEN", "PRIVATE_SPA_PUBLIC_REPO_LEAK"}:
+        if f["rule_id"] == "HARDCODED_SECRET_TOKEN":
             files_to_fix.setdefault(f["file"], set()).add(f["rule_id"])
 
     fixed_files: List[Dict[str, Any]] = []
-    for fpath, rules_hit in files_to_fix.items():
+    for fpath in sorted(files_to_fix.keys()):
+        real_f = os.path.realpath(fpath)
+        if os.path.islink(fpath):
+            continue
+        if not allow_outside_cwd:
+            try:
+                if os.path.commonpath([real_target, real_f]) != real_target:
+                    continue
+            except ValueError:
+                continue
         try:
-            with open(fpath, "r", encoding="utf-8", errors="ignore") as fp:
+            with open(real_f, "r", encoding="utf-8", errors="ignore") as fp:
                 raw = fp.read()
         except OSError:
             continue
 
-        norm_f = fpath.replace("\\", "/").lower()
-        if "PRIVATE_SPA_PUBLIC_REPO_LEAK" in rules_hit and norm_f.endswith("/index.html") and "vf_gh_pages_repo" in norm_f:
-            import subprocess
-            try:
-                clean_html = subprocess.check_output(
-                    ["git", "-C", os.path.dirname(fpath), "show", "8692ce6c:index.html"],
-                    stderr=subprocess.DEVNULL,
-                ).decode("utf-8", "ignore")
-                clean_html = clean_html.replace("?v=20261122", "?v=20261122b")
-            except Exception:
-                clean_html = (
-                    '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-                    '<meta http-equiv="refresh" content="0;url=https://agency.visionflowgroup.com/">'
-                    '<link rel="canonical" href="https://agency.visionflowgroup.com/">'
-                    "<title>Vision Flow Group</title></head><body>"
-                    '<script>location.replace("https://agency.visionflowgroup.com/");</script></body></html>\n'
+        healed = raw
+        for pat, repl in SECRET_REDACT_PATTERNS:
+            healed = pat.sub(repl, healed)
+        if healed != raw:
+            if dry_run:
+                fixed_files.append(
+                    {
+                        "file": real_f,
+                        "action": "would_redact_hardcoded_secrets_in_place",
+                        "dry_run": True,
+                        "backup_file": f"{real_f}.bak" if create_backup else None,
+                    }
                 )
-            with open(fpath, "w", encoding="utf-8") as fp:
-                fp.write(clean_html)
-            fixed_files.append({"file": fpath, "action": "restored_clean_static_redirect_index_html"})
-        else:
-            healed = raw
-            for pat, repl in SECRET_REDACT_PATTERNS:
-                healed = pat.sub(repl, healed)
-            if healed != raw:
-                with open(fpath, "w", encoding="utf-8") as fp:
+            else:
+                backup_path = None
+                if create_backup:
+                    backup_path = f"{real_f}.bak"
+                    with open(backup_path, "w", encoding="utf-8") as bfp:
+                        bfp.write(raw)
+                with open(real_f, "w", encoding="utf-8") as fp:
                     fp.write(healed)
-                fixed_files.append({"file": fpath, "action": "redacted_hardcoded_secrets_in_place"})
+                fixed_files.append(
+                    {
+                        "file": real_f,
+                        "action": "redacted_hardcoded_secrets_in_place",
+                        "dry_run": False,
+                        "backup_file": backup_path,
+                    }
+                )
 
-    after_report = scan_path(target_path, include_raw_secrets=False)
+    after_report = report if dry_run else scan_path(real_target, include_raw_secrets=False)
     return {
         "scanner_version": VERSION,
-        "target_dir": target_path,
-        "files_remediated": len(fixed_files),
+        "target_dir": real_target,
+        "dry_run": dry_run,
+        "files_remediated": 0 if dry_run else len(fixed_files),
+        "files_previewed": len(fixed_files) if dry_run else 0,
         "remediation_actions": fixed_files,
         "before_findings": report["total_findings"],
         "after_findings": after_report["total_findings"],
@@ -691,11 +726,24 @@ def run_mcp_server() -> int:
         },
         {
             "name": "remediate_path",
-            "description": "Automatically redact hardcoded secrets or restore clean static redirect index.html in a local directory or file before git push.",
+            "description": (
+                "Preview (default dry_run=true) or apply (apply=true, creating .bak backups) in-place "
+                "redaction of matched secret tokens strictly within the current workspace directory."
+            ),
             "inputSchema": {
                 "type": "object",
                 "properties": {
-                    "target": {"type": "string", "description": "Local directory or file path to auto-remediate."},
+                    "target": {"type": "string", "description": "Workspace-contained directory or file path."},
+                    "apply": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Set true to write redacted files on disk (creates .bak backups). Defaults to false (read-only preview).",
+                    },
+                    "backup": {
+                        "type": "boolean",
+                        "default": True,
+                        "description": "Create a <file>.bak backup before modifying any file when apply=true.",
+                    },
                 },
                 "required": ["target"],
                 "additionalProperties": False,
@@ -756,12 +804,26 @@ def run_mcp_server() -> int:
                 resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"content": [{"type": "text", "text": text_out}]}}
             elif tname == "remediate_path":
                 target = str(targs.get("target") or ".")
-                res_fix = auto_remediate_path(target)
-                resp = {
-                    "jsonrpc": "2.0",
-                    "id": msg_id,
-                    "result": {"content": [{"type": "text", "text": json.dumps(res_fix, indent=2)}]},
-                }
+                apply_changes = bool(targs.get("apply", False))
+                make_backup = bool(targs.get("backup", True))
+                try:
+                    res_fix = auto_remediate_path(
+                        target,
+                        dry_run=not apply_changes,
+                        create_backup=make_backup,
+                        allow_outside_cwd=False,
+                    )
+                    resp = {
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "result": {"content": [{"type": "text", "text": json.dumps(res_fix, indent=2)}]},
+                    }
+                except PermissionError as exc:
+                    resp = {
+                        "jsonrpc": "2.0",
+                        "id": msg_id,
+                        "error": {"code": -32602, "message": str(exc)},
+                    }
             else:
                 resp = {
                     "jsonrpc": "2.0",
@@ -816,12 +878,27 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--fix",
         action="store_true",
-        help="Automatically redact hardcoded secrets or restore clean static redirect index.html before git push",
+        help="Redact matched hardcoded secret tokens in place within workspace (creates <file>.bak backup unless --no-backup is passed)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview files that --fix would redact without modifying any files on disk",
+    )
+    parser.add_argument(
+        "--no-backup",
+        action="store_true",
+        help="Skip creating <file>.bak backups when running --fix",
+    )
+    parser.add_argument(
+        "--allow-outside-cwd",
+        action="store_true",
+        help="Explicitly allow --fix on a target path outside the current working directory",
     )
     parser.add_argument(
         "--pre-push",
         action="store_true",
-        help="Run in Git pre-commit/pre-push guard mode (auto-fixes private SPA leaks and exits 1 if unredacted HIGH/CRITICAL findings remain)",
+        help="Run in Git pre-commit/pre-push guard mode (exits 1 if HIGH or CRITICAL findings are detected)",
     )
     parser.add_argument("--mcp", action="store_true", help="Run as a stdio JSON-RPC 2.0 MCP server")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
@@ -836,11 +913,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         return run_mcp_server()
 
     target = args.flag_target or args.positional_target or "."
-    if args.fix or args.pre_push:
-        fix_report = auto_remediate_path(target)
-        if args.fix and not args.pre_push:
-            print(json.dumps(fix_report, indent=2, ensure_ascii=False))
-            return 0
+    if args.fix or args.dry_run:
+        fix_report = auto_remediate_path(
+            target,
+            dry_run=bool(args.dry_run),
+            create_backup=not bool(args.no_backup),
+            allow_outside_cwd=bool(args.allow_outside_cwd),
+        )
+        print(json.dumps(fix_report, indent=2, ensure_ascii=False))
+        return 0
 
     report = scan_path(target, include_raw_secrets=args.include_raw_secrets)
 
