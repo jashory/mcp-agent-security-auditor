@@ -1,7 +1,7 @@
 # 🔒 MCP & Agent Security Auditor — Stdio MCP Server, Python AST Scanner & GitHub Action (v2.4.0)
 
 <p align="center">
-  <a href="https://glama.ai/mcp/servers/@jashory/mcp-agent-security-auditor"><img src="https://glama.ai/mcp/servers/@jashory/mcp-agent-security-auditor/badge" alt="MCP & Agent Security Auditor on Glama"/></a>
+  <a href="https://glama.ai/mcp/servers/jashory/mcp-agent-security-auditor"><img src="https://glama.ai/mcp/servers/jashory/mcp-agent-security-auditor/badges/score.svg" alt="jashory/mcp-agent-security-auditor MCP server"/></a>
 </p>
 
 <p align="center">
