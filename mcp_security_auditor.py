@@ -22,7 +22,7 @@ import re
 import sys
 from typing import Any, Dict, List, Optional
 
-VERSION = "2.3.0"
+VERSION = "2.4.0"
 
 SECRET_REDACT_PATTERNS = [
     (re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"), "ghp_[REDACTED]"),
@@ -718,17 +718,22 @@ def run_mcp_server() -> int:
             continue
 
         if method == "initialize":
+            req_proto = str((msg.get("params") or {}).get("protocolVersion") or "2024-11-05")
             resp = {
                 "jsonrpc": "2.0",
                 "id": msg_id,
                 "result": {
-                    "protocolVersion": "2024-11-05",
-                    "capabilities": {"tools": {}},
+                    "protocolVersion": req_proto,
+                    "capabilities": {"tools": {}, "resources": {}, "prompts": {}},
                     "serverInfo": {"name": "mcp-agent-security-auditor", "version": VERSION},
                 },
             }
         elif method == "ping":
             resp = {"jsonrpc": "2.0", "id": msg_id, "result": {}}
+        elif method == "resources/list":
+            resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"resources": []}}
+        elif method == "prompts/list":
+            resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"prompts": []}}
         elif method == "tools/list":
             resp = {"jsonrpc": "2.0", "id": msg_id, "result": {"tools": tools_spec}}
         elif method == "tools/call":

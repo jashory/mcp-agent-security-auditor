@@ -1,4 +1,4 @@
-name: Cloud CI — AST, Action CLI & Stdio MCP Verification
+name: Cloud CI — AST, Action CLI, Stdio MCP & Docker Container Verification
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify AST, 12 Rules, Action Flags, SARIF & Default Secret Redaction
+      - name: Verify AST, 13 Rules, Action Flags, SARIF, Secret Redaction & Stdio MCP
         run: |
           python3 - <<'PY'
           import json, os, subprocess, sys, tempfile
@@ -30,7 +30,6 @@ jobs:
                       "    yaml.load(user_path)\n"
                       "    return open(user_path).read()\n"
                   )
-              # Also write a realistic literal token fixture to test secret redaction
               env_file = os.path.join(tmp, ".env")
               with open(env_file, "w") as f:
                   f.write("GITHUB_TOKEN=" + "ghp_" + ("A" * 36) + "\n")
@@ -56,19 +55,48 @@ jobs:
               assert sarif["version"] == "2.1.0"
 
               rpc_in = "\n".join([
-                  json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}),
+                  json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}}),
                   json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
                   json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/list"}),
-                  json.dumps({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "scan_path", "arguments": {"target": tmp}}}),
+                  json.dumps({"jsonrpc": "2.0", "id": 3, "method": "resources/list"}),
+                  json.dumps({"jsonrpc": "2.0", "id": 4, "method": "prompts/list"}),
+                  json.dumps({"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "scan_path", "arguments": {"target": tmp}}}),
               ]) + "\n"
               pm = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_in, capture_output=True, text=True)
               assert pm.returncode == 0, pm.stderr
               lines = [json.loads(x) for x in pm.stdout.strip().splitlines()]
-              assert len(lines) == 3, lines
+              assert len(lines) == 5, lines
               assert lines[0]["result"]["serverInfo"]["name"] == "mcp-agent-security-auditor"
               tool_names = {t["name"] for t in lines[1]["result"]["tools"]}
               assert {"scan_path", "list_security_rules", "remediate_path"} <= tool_names
-              scan_res = json.loads(lines[2]["result"]["content"][0]["text"])
+              assert lines[2]["result"]["resources"] == []
+              assert lines[3]["result"]["prompts"] == []
+              scan_res = json.loads(lines[4]["result"]["content"][0]["text"])
               assert scan_res["secrets_redacted"] is True and scan_res["total_findings"] >= 5
-              print("ALL CLOUD CI VERIFICATIONS PASSED:", sorted(rule_ids))
+              print("PYTHON + STDIO MCP CHECKS PASSED:", sorted(rule_ids))
+          PY
+
+      - name: Build Docker Image & Verify Live Stdio MCP Protocol Inside Container (Glama Inspector Check)
+        run: |
+          docker build -t mcp-agent-security-auditor:ci .
+          python3 - <<'PY'
+          import json, subprocess
+
+          rpc_in = "\n".join([
+              json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}}),
+              json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}),
+              json.dumps({"jsonrpc": "2.0", "id": 2, "method": "ping"}),
+              json.dumps({"jsonrpc": "2.0", "id": 3, "method": "tools/list"}),
+              json.dumps({"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "list_security_rules", "arguments": {}}}),
+          ]) + "\n"
+          p = subprocess.run(["docker", "run", "-i", "--rm", "mcp-agent-security-auditor:ci"], input=rpc_in, capture_output=True, text=True, timeout=30)
+          assert p.returncode == 0, f"Docker MCP failed: {p.stderr}"
+          lines = [json.loads(x) for x in p.stdout.strip().splitlines()]
+          assert len(lines) == 4, lines
+          assert lines[0]["result"]["serverInfo"]["name"] == "mcp-agent-security-auditor"
+          assert lines[1]["result"] == {}
+          assert len(lines[2]["result"]["tools"]) == 3
+          rules = json.loads(lines[3]["result"]["content"][0]["text"])
+          assert len(rules) >= 12
+          print("DOCKER LIVE MCP CONTAINER VERIFICATION PASSED! Tools:", [t["name"] for t in lines[2]["result"]["tools"]])
           PY

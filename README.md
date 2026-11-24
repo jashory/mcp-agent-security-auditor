@@ -1,25 +1,60 @@
-# 🔒 AI Agent, MCP & Firebase Pre-Audit Security Scanner (v2.3.0)
+# 🔒 MCP & Agent Security Auditor — Stdio MCP Server, Python AST Scanner & GitHub Action (v2.4.0)
+
+<p align="center">
+  <a href="https://glama.ai/mcp/servers/@jashory/mcp-agent-security-auditor"><img src="https://glama.ai/mcp/servers/@jashory/mcp-agent-security-auditor/badge" alt="MCP & Agent Security Auditor on Glama"/></a>
+</p>
 
 <p align="center">
   <a href="https://jashory.github.io/mcp-agent-security-auditor/"><img src="https://img.shields.io/badge/Live_Browser_Playground-Try_Now-22C55E?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Live Browser Playground"/></a>
-  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.3.0"><img src="https://img.shields.io/badge/Release-v2.3.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.3.0"/></a>
+  <a href="https://github.com/jashory/mcp-agent-security-auditor/releases/tag/v2.4.0"><img src="https://img.shields.io/badge/Release-v2.4.0-38BDF8?style=for-the-badge&logo=github&logoColor=white" alt="Release v2.4.0"/></a>
   <a href="https://github.com/jashory/mcp-agent-security-auditor/blob/main/action.yml"><img src="https://img.shields.io/badge/GitHub_Action-Ready-F59E0B?style=for-the-badge&logo=githubactions&logoColor=white" alt="GitHub Action Ready"/></a>
+  <a href="https://github.com/jashory/mcp-agent-security-auditor/blob/main/Dockerfile"><img src="https://img.shields.io/badge/MCP_Server-Stdio_%26_Docker-8B5CF6?style=for-the-badge&logo=docker&logoColor=white" alt="MCP Server Stdio and Docker"/></a>
 </p>
 
 <p align="center">
   <img src="assets/terminal-demo.svg" alt="mcp-agent-security-auditor terminal preview" width="860"/>
 </p>
 
-
-**Lightweight static security auditor and Agent Skill for catching CWE-mapped vulnerabilities in MCP servers, AI agent hooks, and Firebase rules before shipping.**
+**Zero-dependency Model Context Protocol (MCP) Server, Python AST security scanner, Pre-Push Auto-Healer, and GitHub Action for catching 13 CWE-mapped vulnerabilities in MCP servers, AI agent hooks, HTML/SPA bundles, and Firebase rules before shipping.**
 
 Authored by **Scientist HM Shihabuddin Jashory (Shihab)** (ORCID: [0009-0003-4163-0092](https://orcid.org/0009-0003-4163-0092)) · Research & Evaluation Ecosystem with **MD Rafiul Islam Shubho** (Researcher, AI Evaluator & RLHF Specialist) — **[Vision Flow Group](https://visionflowgroup.com)** ([TechBehemoths #101215](https://techbehemoths.com/company/vision-flow-group)) · [Research Hub](https://jashory.github.io/hqas8-autonomous-agentic-governance/) · [Tools Hub](https://go.visionflowgroup.com/) · [Studio](https://studio.visionflowgroup.com/)
 
 ---
 
+## 🔌 Model Context Protocol (MCP) Server
+
+`mcp-agent-security-auditor` runs natively as a **JSON-RPC 2.0 stdio MCP server** (`python3 -u mcp_security_auditor.py --mcp` or via `Dockerfile`) with **zero external runtime dependencies** (100% Python 3.9+ standard library).
+
+### Exposed MCP Tools
+| MCP Tool | Arguments | Purpose |
+| :--- | :--- | :--- |
+| `scan_path` | `target` (required string), `format` (`json` \| `markdown` \| `sarif`) | Runs Python AST + JSON schema + heuristic security audit on any local directory or file with automatic secret redaction enabled by default. |
+| `list_security_rules` | `{}` | Returns all 13 CWE-mapped static security rules, severities, descriptions, and remediation playbooks. |
+| `remediate_path` | `target` (required string) | Auto-redacts leaked secret tokens or restores clean static redirect HTML prior to `git push`. |
+
+### MCP Client Configuration (`claude_desktop_config.json`, Cursor, Kiro, Windsurf)
+```json
+{
+  "mcpServers": {
+    "mcp-agent-security-auditor": {
+      "command": "python3",
+      "args": ["-u", "/path/to/mcp_security_auditor.py", "--mcp"]
+    }
+  }
+}
+```
+
+### Run the MCP Server via Docker (Stdio)
+```bash
+docker build -t mcp-agent-security-auditor .
+docker run -i --rm -v "$(pwd):/workspace:ro" mcp-agent-security-auditor
+```
+
+---
+
 ## ⚡ 1. Install via AI Agent (Claude Code, Antigravity, Cursor, Codex)
 Paste this single prompt into your AI coding agent:
-> **Prompt:** `Clone https://github.com/jashory/mcp-agent-security-auditor and run "python install.py" to install the security scanner CLI and Agent Skill.`
+> **Prompt:** `Clone https://github.com/jashory/mcp-agent-security-auditor and run "python install.py" to install the MCP server, security scanner CLI, and Agent Skill.`
 
 ## 💻 2. Install via CLI (Terminal / Skills CLI / pip)
 ```bash
@@ -30,25 +65,34 @@ npx skills add jashory/mcp-agent-security-auditor
 git clone https://github.com/jashory/mcp-agent-security-auditor.git
 cd mcp-agent-security-auditor && python install.py
 
-# Option C: Global CLI Tool via pip / uv
+# Option C: Global CLI Tool & MCP Server via pip / uv
 pip install mcp-agent-security-auditor
 # Or directly from GitHub:
 pip install git+https://github.com/jashory/mcp-agent-security-auditor.git
+
+# Run CLI scanner with SARIF output and CI exit gate:
 mcp-security-auditor --target /path/to/repo --format sarif --ci
-# Run as a stdio JSON-RPC 2.0 MCP server:
+
+# Start the stdio JSON-RPC 2.0 MCP server:
 mcp-security-auditor --mcp
 ```
 
 ---
 
-## 🔍 7 High-Signal CWE Security Rules Detected
-1. **`AGENT_ENV_SECRET_PERSISTENCE` (`CWE-312`)**: Detects when an agent CLI or config migrator reads resolved `settings.merged` (`${ENV_VAR}` expanded in memory) and writes it back to disk via `setValue`.
+## 🔍 13 High-Signal CWE Security Rules Detected (Python AST + JSON Schema + Heuristics)
+1. **`AGENT_ENV_SECRET_PERSISTENCE` (`CWE-312`)**: Detects when an agent CLI or config migrator resolves `${ENV_VAR}` secrets in memory and writes them back to disk via `setValue`.
 2. **`FIREBASE_OPEN_DATABASE_RULES` (`CWE-284`)**: Detects public `.read: true` or `.write: true` in Firebase Realtime Database rules.
 3. **`FIRESTORE_OPEN_WILDCARD_RULES` (`CWE-284`)**: Detects unauthenticated `match /{document=**} { allow read, write: if true; }` in `firestore.rules`.
-4. **`MCP_SHELL_COMMAND_INJECTION` (`CWE-78`)**: Detects `subprocess(..., shell=True)` and `child_process.exec` command injection sinks in MCP tool handlers.
-5. **`MCP_PATH_TRAVERSAL_UNSANITIZED` (`CWE-22`)**: Detects direct path concatenation of tool arguments without canonical `realpath` boundary verification.
-6. **`MCP_UNRESTRICTED_SSRF_FETCH` (`CWE-918`)**: Detects unrestricted URL fetchers in MCP tools that allow cloud metadata (`169.254.169.254`) or localhost probing.
-7. **`AGENT_DYNAMIC_CODE_EVAL` (`CWE-94`)**: Detects `eval` / `new Function` on untrusted agent inputs.
+4. **`MCP_SHELL_COMMAND_INJECTION` (`CWE-78`)**: AST + pattern detection of `subprocess(..., shell=True)`, `os.system`, `os.popen`, and `child_process.exec` sinks in MCP tool handlers.
+5. **`MCP_PATH_TRAVERSAL_UNCHECKED` (`CWE-22`)**: Python AST detection of tool-function parameters flowing into `open()` / `Path.read_text()` / `write_text()` without canonical boundary checks.
+6. **`MCP_UNSAFE_DESERIALIZATION` (`CWE-502`)**: Python AST detection of unsafe `pickle.loads`, `yaml.load`, or `marshal.loads` without safe loaders.
+7. **`MCP_TOOL_SCHEMA_UNCONSTRAINED` (`CWE-20`)**: JSON Schema validation flagging MCP tool `inputSchema` objects missing `"additionalProperties": false`.
+8. **`MCP_UNRESTRICTED_SSRF_FETCH` (`CWE-918`)**: Detects unrestricted URL fetchers in MCP tools allowing cloud metadata (`169.254.169.254`) or localhost probing.
+9. **`AGENT_DYNAMIC_CODE_EVAL` (`CWE-94`)**: AST + pattern detection of `eval` / `exec` / `new Function` on untrusted agent inputs.
+10. **`HARDCODED_SECRET_TOKEN` (`CWE-798`)**: Detects hardcoded GitHub PATs, OpenAI/Anthropic/HuggingFace/Google/AWS/Atlassian/Slack keys and private keys (values automatically redacted in output by default).
+11. **`PROMPT_INJECTION_TOOL_POISONING` (`CWE-74`)**: Detects hidden prompt-injection directives embedded inside MCP tool descriptions or metadata.
+12. **`PRIVATE_SPA_PUBLIC_REPO_LEAK` (`CWE-200`)**: Detects accidental deployment of private SPA portal credentials or internal HTML bundles into public GitHub Pages repos.
+13. **`OVERPERMISSIVE_CORS_WILDCARD` (`CWE-942`)**: Detects wildcard CORS (`Access-Control-Allow-Origin: *`) combined with credentials.
 
 ## GitHub Actions Integration (`action.yml`)
 
@@ -56,7 +100,11 @@ Use `mcp-agent-security-auditor` directly inside any CI/CD workflow:
 
 ```yaml
 - name: Run mcp-agent-security-auditor
-  uses: jashory/mcp-agent-security-auditor@v2.2.0
+  uses: jashory/mcp-agent-security-auditor@v2.4.0
+  with:
+    target: '.'
+    format: 'sarif'
+    ci: 'true'
 ```
 
 ## Live Interactive Browser Playground
