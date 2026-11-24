@@ -89,16 +89,16 @@ jobs:
                   orig_secret = "API_TOKEN=" + "ghp_" + ("B" * 36) + "\n"
                   with open(secret_f, "w") as sf:
                       sf.write(orig_secret)
-                  rpc_rem_in = "\n".join([
-                      json.dumps({"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": ws_sub}}}),
-                      json.dumps({"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": ws_sub, "apply": True}}}),
-                  ]) + "\n"
-                  pm_in = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_rem_in, capture_output=True, text=True)
-                  in_lines = [json.loads(x) for x in pm_in.stdout.strip().splitlines()]
-                  dry_res = json.loads(in_lines[0]["result"]["content"][0]["text"])
-                  assert dry_res["dry_run"] is True and dry_res["files_previewed"] == 1 and not os.path.exists(secret_f + ".bak")
-                  app_res = json.loads(in_lines[1]["result"]["content"][0]["text"])
-                  assert app_res["dry_run"] is False and app_res["files_remediated"] == 1 and os.path.exists(secret_f + ".bak")
+                  rpc_dry = json.dumps({"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": ws_sub}}}) + "\n"
+                  pm_dry = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_dry, capture_output=True, text=True)
+                  dry_res = json.loads(json.loads(pm_dry.stdout.strip().splitlines()[0])["result"]["content"][0]["text"])
+                  assert dry_res["dry_run"] is True and dry_res["files_previewed"] == 1 and not os.path.exists(secret_f + ".bak"), f"Dry run failed: {dry_res}"
+                  assert open(secret_f).read() == orig_secret
+
+                  rpc_app = json.dumps({"jsonrpc": "2.0", "id": 12, "method": "tools/call", "params": {"name": "remediate_path", "arguments": {"target": ws_sub, "apply": True}}}) + "\n"
+                  pm_app = subprocess.run([sys.executable, "mcp_security_auditor.py", "--mcp"], input=rpc_app, capture_output=True, text=True)
+                  app_res = json.loads(json.loads(pm_app.stdout.strip().splitlines()[0])["result"]["content"][0]["text"])
+                  assert app_res["dry_run"] is False and app_res["files_remediated"] == 1 and os.path.exists(secret_f + ".bak"), f"Apply failed: {app_res}"
                   assert open(secret_f + ".bak").read() == orig_secret
                   assert "ghp_[REDACTED]" in open(secret_f).read()
               finally:
